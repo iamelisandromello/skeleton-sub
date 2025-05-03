@@ -3,13 +3,11 @@ provider "aws" {
 }
 
 # Bucket S3 para guardar o código zipado da função Lambda.
-# Sem instrução de criação, pois deve ser sempre importado e reutilizado conforme regras de negócio.
 resource "aws_s3_bucket" "lambda_code_bucket" {
   bucket = "meu-unico-bucket-s3"
 }
 
 # IAM Role para a execução das funções Lambda.
-# Sem instrução de criação, deve ser importada caso exista, conforme regras de negócio.
 resource "aws_iam_role" "lambda_execution_role" {
   name = "${var.project_name}_execution_role"
 
@@ -20,14 +18,35 @@ resource "aws_iam_role" "lambda_execution_role" {
         Action = "sts:AssumeRole",
         Effect = "Allow",
         Principal = {
-          Service: "lambda.amazonaws.com"
+          Service = "lambda.amazonaws.com"
         }
       }
     ]
   })
 }
 
-# Função Lambda que deverá ser atualizada em caso de existência, nunca criar uma duplicata.
+# Política de permissão da Role da Lambda para acessar SQS
+resource "aws_iam_role_policy" "lambda_sqs_policy" {
+  name = "lambda-sqs-policy"
+  role = aws_iam_role.lambda_execution_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes"
+        ],
+        Resource = aws_sqs_queue.skeleton_pub_queue.arn
+      }
+    ]
+  })
+}
+
+# Função Lambda
 resource "aws_lambda_function" "my_lambda_function" {
   function_name = var.project_name
   role          = aws_iam_role.lambda_execution_role.arn
@@ -42,8 +61,7 @@ resource "aws_lambda_function" "my_lambda_function" {
   }
 }
 
-# CloudWatch Log Group para a função Lambda com instrução de importação se já existir.
-# Conformidade com as regras de negócio para reutilização de recursos.
+# CloudWatch Log Group
 resource "aws_cloudwatch_log_group" "lambda_log_group" {
   name              = "/aws/lambda/${var.project_name}"
   retention_in_days = 14
@@ -63,7 +81,7 @@ resource "aws_lambda_permission" "allow_sqs_invoke" {
   source_arn    = aws_sqs_queue.skeleton_pub_queue.arn
 }
 
-# Evento para ligar a fila à Lambda
+# Mapeamento de evento da SQS para a Lambda
 resource "aws_lambda_event_source_mapping" "from_sqs" {
   event_source_arn  = aws_sqs_queue.skeleton_pub_queue.arn
   function_name     = aws_lambda_function.my_lambda_function.arn
