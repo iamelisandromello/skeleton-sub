@@ -59,8 +59,9 @@ jobs:
           terraform import aws_iam_role.lambda_execution_role ${{ env.PROJECT_NAME }}_execution_role || echo "Role already managed"
           terraform import aws_cloudwatch_log_group.lambda_log_group "/aws/lambda/${{ env.PROJECT_NAME }}" || echo "Log group already managed"
           terraform import aws_lambda_function.my_lambda_function ${{ env.PROJECT_NAME }}
-          if aws sqs get-queue-url --queue-name skeleton-pub-queue --region us-east-1 > /dev/null 2>&1; then
-            terraform import aws_sqs_queue.skeleton_pub_queue skeleton-pub-queue
+          QUEUE_URL=$(aws sqs get-queue-url --queue-name skeleton-pub-queue --region us-east-1 --query 'QueueUrl' --output text 2>/dev/null)
+          if [ -n "$QUEUE_URL" ]; then
+            terraform import aws_sqs_queue.skeleton_pub_queue "$QUEUE_URL"
           else
             echo "Queue skeleton-pub-queue does not exist"
           fi
