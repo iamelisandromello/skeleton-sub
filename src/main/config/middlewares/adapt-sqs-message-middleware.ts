@@ -15,6 +15,9 @@ export class AdaptSqsMessageMiddleware
     }
 
     let parsedBody: QueueMessage<any>
+
+    console.log('MESSAGE BODY - ADAPTSQS:: ', messageBody)
+
     try {
       parsedBody = JSON.parse(messageBody)
     } catch (e: unknown) {
