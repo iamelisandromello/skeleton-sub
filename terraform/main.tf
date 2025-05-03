@@ -48,3 +48,25 @@ resource "aws_cloudwatch_log_group" "lambda_log_group" {
   name              = "/aws/lambda/${var.project_name}"
   retention_in_days = 14
 }
+
+# Fila SQS
+resource "aws_sqs_queue" "skeleton_pub_queue" {
+  name = "skeleton-pub-queue"
+}
+
+# Permissão para que a SQS invoque a Lambda
+resource "aws_lambda_permission" "allow_sqs_invoke" {
+  statement_id  = "AllowExecutionFromSQS"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.my_lambda_function.function_name
+  principal     = "sqs.amazonaws.com"
+  source_arn    = aws_sqs_queue.skeleton_pub_queue.arn
+}
+
+# Evento para ligar a fila à Lambda
+resource "aws_lambda_event_source_mapping" "from_sqs" {
+  event_source_arn  = aws_sqs_queue.skeleton_pub_queue.arn
+  function_name     = aws_lambda_function.my_lambda_function.arn
+  batch_size        = 10
+  enabled           = true
+}
