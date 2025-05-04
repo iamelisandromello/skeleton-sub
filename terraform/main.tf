@@ -25,7 +25,7 @@ resource "aws_iam_role" "lambda_execution_role" {
   })
 }
 
-# Política de permissão da Role da Lambda para acessar SQS
+# Política de permissão da Role da Lambda para acessar SQS e CloudWatch Logs
 resource "aws_iam_role_policy" "lambda_sqs_policy" {
   name = "lambda-sqs-policy"
   role = aws_iam_role.lambda_execution_role.id
@@ -41,6 +41,13 @@ resource "aws_iam_role_policy" "lambda_sqs_policy" {
           "sqs:GetQueueAttributes"
         ],
         Resource = aws_sqs_queue.skeleton_pub_queue.arn
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "logs:*"
+        ],
+        Resource = "arn:aws:logs:${var.region}:*:log-group:/aws/lambda/${var.project_name}:*"
       }
     ]
   })
