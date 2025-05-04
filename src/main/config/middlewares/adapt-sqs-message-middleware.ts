@@ -20,7 +20,8 @@ export class AdaptSqsMessageMiddleware
 
     try {
       parsedBody = JSON.parse(messageBody)
-    } catch (e: unknown) {
+    } catch (error: unknown) {
+      console.log('ERROR PARSER:: ', error)
       throw new Error('SQS message body parsing error')
     }
 
