@@ -5,7 +5,7 @@ import type { SQSEvent } from 'aws-lambda'
 
 import type { APIGatewayProxyResult } from 'aws-lambda/trigger/api-gateway-proxy'
 
-export const lambdaHandler = async (
+export const handler = async (
   event: SQSEvent
 ): Promise<APIGatewayProxyResult | undefined> => {
   console.log('EVENTO: ', event)
