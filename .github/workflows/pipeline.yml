@@ -66,6 +66,20 @@ jobs:
             echo "Queue skeleton-pub-queue does not exist"
           fi
           terraform import aws_lambda_permission.allow_sqs_invoke ${{ env.PROJECT_NAME }}/AllowExecutionFromSQS || echo "Permission already managed"
+          # Importar Event Source Mapping se já existir
+          MAPPING_UUID=$(aws lambda list-event-source-mappings \
+            --function-name ${{ env.PROJECT_NAME }} \
+            --event-source arn:aws:sqs:us-east-1:125702582030:skeleton-pub-queue \
+            --region us-east-1 \
+            --query 'EventSourceMappings[0].UUID' \
+            --output text 2>/dev/null)
+
+          if [ "$MAPPING_UUID" != "None" ] && [ -n "$MAPPING_UUID" ]; then
+            terraform import aws_lambda_event_source_mapping.from_sqs "$MAPPING_UUID"
+          else
+            echo "Event Source Mapping not found"
+          fi
+
         continue-on-error: true
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
