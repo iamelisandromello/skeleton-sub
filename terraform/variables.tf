@@ -1,6 +1,6 @@
-# =========================
+# =================================
 # Variáveis de ambiente do Projeto
-# =========================
+# =================================
 
 variable "TZ" {
   type = string
@@ -22,20 +22,21 @@ variable "MOCK_ACCESS_TOKEN" {
   type = string
 }
 
-# =========================
+# ================================
 # Variáveis de ambiente da GitHub
-# =========================
+# ================================
 
 variable "project_name" {
   description = "Name of the project derived from GitHub Repository name"
   type        = string
 }
 
-# =========================
+# ================================
 # Variáveis de ambiente da Lambda
-# =========================
+# ================================
 
 variable "region" {
+  description = "Regiao da AWS onde os recursos são provisionados"
   default = "us-east-1"
 }
 
