@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  TF_VAR_ACCOUNT_ID: 125702582030
+  TF_VAR_ACCOUNT_ID: $(aws sts get-caller-identity --query Account --output text)
   TF_VAR_AWS_REGION: us-east-1
   TF_VAR_QUEUE_NAME: skeleton-pub-queue
   PROJECT_NAME: skeleton-sub
@@ -37,12 +37,15 @@ jobs:
 
       - name: Terraform Format Check
         run: terraform fmt -check
+        working-directory: terraform
 
       - name: Terraform Validate
         run: terraform validate
+        working-directory: terraform
 
       - name: Terraform Plan
         run: terraform plan -input=false
+        working-directory: terraform
 
       - name: Terraform Import Existing Resources
         run: |
@@ -74,3 +77,4 @@ jobs:
 
       - name: Terraform Apply
         run: terraform apply -auto-approve -input=false
+        working-directory: terraform
