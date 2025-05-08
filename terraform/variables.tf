@@ -14,7 +14,7 @@ variable "EXAMPLE_QUEUE_URL" {
   type = string
 }
 
-variable "MESSAGE_TYPE_QUEUE {
+variable "MESSAGE_TYPE_QUEUE" {
   type = string
 }
 
@@ -30,7 +30,7 @@ variable "project_name" {
   description = "Name of the project derived from GitHub Repository name"
   type        = string
 }
-  
+
 # =========================
 # Variáveis de ambiente da Lambda
 # =========================
