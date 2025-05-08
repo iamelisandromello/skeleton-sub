@@ -9,6 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AWS_REGION: us-east-1
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -52,40 +53,40 @@ jobs:
         working-directory: terraform
 
       - name: Create environment JSON file for Terraform
-        run: |
-          echo '${{ secrets.LAMBDA_ENV_VARS_JSON }}' > terraform/lambda-env-vars.auto.tfvars.json
+        run: echo '${{ secrets.LAMBDA_ENV_VARS_JSON }}' > terraform/lambda-env-vars.auto.tfvars.json
 
       - name: Import existing AWS resources
         run: |
+          set +e  # Desabilita exit on error
+          
           export TF_VAR_QUEUE_NAME="${{ env.PROJECT_NAME }}-queue"
           export TF_VAR_AWS_REGION="${{ env.AWS_REGION }}"
           export TF_VAR_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 
           echo "Importando recursos existentes..."
 
-          # Importações com verificação real de sucesso
           aws s3api head-bucket --bucket meu-unico-bucket-s3 && \
             terraform import aws_s3_bucket.lambda_code_bucket meu-unico-bucket-s3 || echo "Bucket não gerenciado"
 
           aws iam get-role --role-name "${{ env.PROJECT_NAME }}_execution_role" && \
-            terraform import aws_iam_role.lambda_execution_role ${{ env.PROJECT_NAME }}_execution_role || echo "Role não gerenciada"
+            terraform import aws_iam_role.lambda_execution_role "${{ env.PROJECT_NAME }}_execution_role" || echo "Role não gerenciada"
 
           aws logs describe-log-groups --log-group-name-prefix "/aws/lambda/${{ env.PROJECT_NAME }}" --region "$TF_VAR_AWS_REGION" && \
             terraform import aws_cloudwatch_log_group.lambda_log_group "/aws/lambda/${{ env.PROJECT_NAME }}" || echo "Log group não gerenciado"
 
-          aws lambda get-function --function-name ${{ env.PROJECT_NAME }} --region "$TF_VAR_AWS_REGION" && \
-            terraform import aws_lambda_function.my_lambda_function ${{ env.PROJECT_NAME }} || echo "Lambda não gerenciada"
+          aws lambda get-function --function-name "${{ env.PROJECT_NAME }}" --region "$TF_VAR_AWS_REGION" && \
+            terraform import aws_lambda_function.my_lambda_function "${{ env.PROJECT_NAME }}" || echo "Lambda não gerenciada"
 
           QUEUE_URL=$(aws sqs get-queue-url --queue-name "$TF_VAR_QUEUE_NAME" --region "$TF_VAR_AWS_REGION" --query 'QueueUrl' --output text 2>/dev/null)
           [ -n "$QUEUE_URL" ] && \
             terraform import aws_sqs_queue.my_queue "$QUEUE_URL" || echo "Fila não gerenciada"
 
-          POLICY=$(aws lambda get-policy --function-name ${{ env.PROJECT_NAME }} --region "$TF_VAR_AWS_REGION" --query 'Policy' --output text 2>/dev/null)
+          POLICY=$(aws lambda get-policy --function-name "${{ env.PROJECT_NAME }}" --region "$TF_VAR_AWS_REGION" --query 'Policy' --output text 2>/dev/null)
           echo "$POLICY" | grep -q "AllowExecutionFromSQS" && \
             terraform import aws_lambda_permission.allow_sqs_invoke "${{ env.PROJECT_NAME }}/AllowExecutionFromSQS" || echo "Permissão não gerenciada"
 
           MAPPING_UUID=$(aws lambda list-event-source-mappings \
-            --function-name ${{ env.PROJECT_NAME }} \
+            --function-name "${{ env.PROJECT_NAME }}" \
             --event-source arn:aws:sqs:$TF_VAR_AWS_REGION:$TF_VAR_ACCOUNT_ID:$TF_VAR_QUEUE_NAME \
             --region $TF_VAR_AWS_REGION \
             --query 'EventSourceMappings[0].UUID' \
@@ -93,6 +94,8 @@ jobs:
 
           [ "$MAPPING_UUID" != "None" ] && [ -n "$MAPPING_UUID" ] && \
             terraform import aws_lambda_event_source_mapping.from_sqs "$MAPPING_UUID" || echo "Event Source Mapping não gerenciado"
+
+          set -e  # Reativa exit on error
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
