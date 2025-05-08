@@ -14,19 +14,19 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4 
+        uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: Install dependencies
         run: npm install
-      
+
       - name: Build TypeScript
         run: npm run build
 
       - name: Setup Environment Variables
         run: echo "PROJECT_NAME=${GITHUB_REPOSITORY#*/}" >> $GITHUB_ENV
-      
+
       - name: Create Lambda ZIP with node_modules
         run: |
           mkdir -p lambda-package
@@ -53,38 +53,59 @@ jobs:
 
       - name: Create environment JSON file for Terraform
         run: |
-          printf '{"lambda_env_vars": %s}\n' '${{ secrets.LAMBDA_ENV_VARS_JSON }}' > terraform/lambda-env-vars.auto.tfvars.json
+          echo '${{ secrets.LAMBDA_ENV_VARS_JSON }}' > terraform/lambda-env-vars.auto.tfvars.json
 
       - name: Import existing AWS resources
         run: |
-          set -e
-
           export QUEUE_NAME="${{ env.PROJECT_NAME }}-queue"
           export AWS_REGION="${{ env.AWS_REGION }}"
           export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 
-          terraform import aws_s3_bucket.lambda_code_bucket meu-unico-bucket-s3 || echo "Bucket already managed"
-          terraform import aws_iam_role.lambda_execution_role ${{ env.PROJECT_NAME }}_execution_role || echo "Role already managed"
-          terraform import aws_cloudwatch_log_group.lambda_log_group "/aws/lambda/${{ env.PROJECT_NAME }}" || echo "Log group already managed"
-          terraform import aws_lambda_function.my_lambda_function ${{ env.PROJECT_NAME }} || echo "Lambda function already managed"
-
-          QUEUE_URL=$(aws sqs get-queue-url --queue-name "$QUEUE_NAME" --region "$AWS_REGION" --query 'QueueUrl' --output text 2>/dev/null)
-          if [ -n "$QUEUE_URL" ]; then
-            echo "Importando a fila SQS existente: $QUEUE_URL"
-            terraform import aws_sqs_queue.my_queue "$QUEUE_URL" || echo "Queue already managed"
+          # Import S3 Bucket if exists
+          if aws s3api head-bucket --bucket meu-unico-bucket-s3 2>/dev/null; then
+            terraform import aws_s3_bucket.lambda_code_bucket meu-unico-bucket-s3 || echo "Bucket already managed"
           else
-            echo "Fila '$QUEUE_NAME' não encontrada na região '$AWS_REGION'."
+            echo "Bucket 'meu-unico-bucket-s3' not found."
           fi
 
-          # Importar permissão Lambda se existir
+          # Import IAM Role if exists
+          if aws iam get-role --role-name "${{ env.PROJECT_NAME }}_execution_role" 2>/dev/null; then
+            terraform import aws_iam_role.lambda_execution_role ${{ env.PROJECT_NAME }}_execution_role || echo "Role already managed"
+          else
+            echo "IAM Role '${{ env.PROJECT_NAME }}_execution_role' not found."
+          fi
+
+          # Import CloudWatch Log Group if exists
+          if aws logs describe-log-groups --log-group-name-prefix "/aws/lambda/${{ env.PROJECT_NAME }}" --region "$AWS_REGION" --query 'logGroups[0].logGroupName' --output text 2>/dev/null; then
+            terraform import aws_cloudwatch_log_group.lambda_log_group "/aws/lambda/${{ env.PROJECT_NAME }}" || echo "Log group already managed"
+          else
+            echo "CloudWatch Log Group '/aws/lambda/${{ env.PROJECT_NAME }}' not found."
+          fi
+
+          # Import Lambda Function if exists
+          if aws lambda get-function --function-name ${{ env.PROJECT_NAME }} --region "$AWS_REGION" 2>/dev/null; then
+            terraform import aws_lambda_function.my_lambda_function ${{ env.PROJECT_NAME }} || echo "Lambda function already managed"
+          else
+            echo "Lambda function '${{ env.PROJECT_NAME }}' not found."
+          fi
+
+          # Import SQS Queue if exists
+          QUEUE_URL=$(aws sqs get-queue-url --queue-name "$QUEUE_NAME" --region "$AWS_REGION" --query 'QueueUrl' --output text 2>/dev/null)
+          if [ -n "$QUEUE_URL" ]; then
+            terraform import aws_sqs_queue.my_queue "$QUEUE_URL" || echo "Queue already managed"
+          else
+            echo "SQS Queue '$QUEUE_NAME' not found in region '$AWS_REGION'."
+          fi
+
+          # Import Lambda Permission if exists
           POLICY=$(aws lambda get-policy --function-name ${{ env.PROJECT_NAME }} --region "$AWS_REGION" --query 'Policy' --output text 2>/dev/null)
           if echo "$POLICY" | grep -q "AllowExecutionFromSQS"; then
             terraform import aws_lambda_permission.allow_sqs_invoke "${{ env.PROJECT_NAME }}/AllowExecutionFromSQS" || echo "Permission already managed"
           else
-            echo "Lambda permission not found"
+            echo "Lambda permission not found."
           fi
 
-          # Importar Event Source Mapping se já existir
+          # Import Event Source Mapping if exists
           MAPPING_UUID=$(aws lambda list-event-source-mappings \
             --function-name ${{ env.PROJECT_NAME }} \
             --event-source arn:aws:sqs:$AWS_REGION:$ACCOUNT_ID:$QUEUE_NAME \
@@ -95,7 +116,7 @@ jobs:
           if [ "$MAPPING_UUID" != "None" ] && [ -n "$MAPPING_UUID" ]; then
             terraform import aws_lambda_event_source_mapping.from_sqs "$MAPPING_UUID" || echo "Event Source Mapping already managed"
           else
-            echo "Event Source Mapping not found"
+            echo "Event Source Mapping not found."
           fi
         continue-on-error: true
         env:
