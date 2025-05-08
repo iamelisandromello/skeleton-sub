@@ -14,19 +14,19 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v4 
         with:
           node-version: 20
 
       - name: Install dependencies
         run: npm install
-
+      
       - name: Build TypeScript
         run: npm run build
 
       - name: Setup Environment Variables
         run: echo "PROJECT_NAME=${GITHUB_REPOSITORY#*/}" >> $GITHUB_ENV
-
+      
       - name: Create Lambda ZIP with node_modules
         run: |
           mkdir -p lambda-package
@@ -75,8 +75,8 @@ jobs:
           fi
 
           # Importar permissão Lambda se existir
-          PERMISSION_EXISTS=$(aws lambda get-policy --function-name ${{ env.PROJECT_NAME }} --region "$AWS_REGION" --query 'Policy' --output text 2>/dev/null)
-          if [ -n "$PERMISSION_EXISTS" ]; then
+          POLICY=$(aws lambda get-policy --function-name ${{ env.PROJECT_NAME }} --region "$AWS_REGION" --query 'Policy' --output text 2>/dev/null)
+          if echo "$POLICY" | grep -q "AllowExecutionFromSQS"; then
             terraform import aws_lambda_permission.allow_sqs_invoke "${{ env.PROJECT_NAME }}/AllowExecutionFromSQS" || echo "Permission already managed"
           else
             echo "Lambda permission not found"
