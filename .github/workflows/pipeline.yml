@@ -53,49 +53,48 @@ jobs:
 
       - name: Create environment JSON file for Terraform
         run: |
-          printf '{"lambda_env_vars": %s}\n' '${{ secrets.LAMBDA_ENV_VARS_JSON }}' > terraform/lambda-env-vars.auto.tfvars.json
+          echo '{"lambda_env_vars": ${{ secrets.LAMBDA_ENV_VARS_JSON }}}' > terraform/lambda-env-vars.auto.tfvars.json
 
-      - name: Import existing AWS resources
+      - name: Manage Existing AWS Resources
         run: |
           export QUEUE_NAME="${{ env.PROJECT_NAME }}-queue"
           export AWS_REGION="${{ env.AWS_REGION }}"
           export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          export FUNCTION_NAME="${{ env.PROJECT_NAME }}"
 
+          # Import existing resources
           terraform import aws_s3_bucket.lambda_code_bucket meu-unico-bucket-s3 || echo "Bucket already managed"
-          terraform import aws_iam_role.lambda_execution_role ${{ env.PROJECT_NAME }}_execution_role || echo "Role already managed"
-          terraform import aws_cloudwatch_log_group.lambda_log_group "/aws/lambda/${{ env.PROJECT_NAME }}" || echo "Log group already managed"
-          terraform import aws_lambda_function.my_lambda_function ${{ env.PROJECT_NAME }} || echo "Lambda function already managed"
+          terraform import aws_iam_role.lambda_execution_role "${FUNCTION_NAME}_execution_role" || echo "Role already managed"
+          terraform import aws_cloudwatch_log_group.lambda_log_group "/aws/lambda/${FUNCTION_NAME}" || echo "Log group already managed"
+          terraform import aws_lambda_function.my_lambda_function "${FUNCTION_NAME}" || echo "Lambda function already managed"
 
+          # Manage SQS Queue
           QUEUE_URL=$(aws sqs get-queue-url --queue-name "$QUEUE_NAME" --region "$AWS_REGION" --query 'QueueUrl' --output text 2>/dev/null)
           if [ -n "$QUEUE_URL" ]; then
-            echo "Importando a fila SQS existente: $QUEUE_URL"
             terraform import aws_sqs_queue.my_queue "$QUEUE_URL" || echo "Queue already managed"
           else
-            echo "Fila '$QUEUE_NAME' não encontrada na região '$AWS_REGION'."
+            echo "Queue '$QUEUE_NAME' not found in region '$AWS_REGION'."
           fi
 
-          # Importar permissão Lambda se existir
-          POLICY=$(aws lambda get-policy --function-name ${{ env.PROJECT_NAME }} --region "$AWS_REGION" --query 'Policy' --output text 2>/dev/null)
+          # Manage Lambda Permission
+          POLICY=$(aws lambda get-policy --function-name "$FUNCTION_NAME" --region "$AWS_REGION" --query 'Policy' --output text 2>/dev/null)
           if echo "$POLICY" | grep -q "AllowExecutionFromSQS"; then
-            terraform import aws_lambda_permission.allow_sqs_invoke "${{ env.PROJECT_NAME }}/AllowExecutionFromSQS" || echo "Permission already managed"
-          else
-            echo "Lambda permission not found"
+            echo "Removing existing Lambda permission 'AllowExecutionFromSQS'"
+            aws lambda remove-permission --function-name "$FUNCTION_NAME" --statement-id "AllowExecutionFromSQS" --region "$AWS_REGION"
           fi
 
-          # Importar Event Source Mapping se já existir
+          # Manage Event Source Mapping
           MAPPING_UUID=$(aws lambda list-event-source-mappings \
-            --function-name ${{ env.PROJECT_NAME }} \
+            --function-name "$FUNCTION_NAME" \
             --event-source arn:aws:sqs:$AWS_REGION:$ACCOUNT_ID:$QUEUE_NAME \
             --region $AWS_REGION \
             --query 'EventSourceMappings[0].UUID' \
             --output text 2>/dev/null)
 
           if [ "$MAPPING_UUID" != "None" ] && [ -n "$MAPPING_UUID" ]; then
-            terraform import aws_lambda_event_source_mapping.from_sqs "$MAPPING_UUID" || echo "Event Source Mapping already managed"
-          else
-            echo "Event Source Mapping not found"
+            echo "Removing existing Event Source Mapping with UUID: $MAPPING_UUID"
+            aws lambda delete-event-source-mapping --uuid "$MAPPING_UUID" --region "$AWS_REGION"
           fi
-        continue-on-error: true
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
