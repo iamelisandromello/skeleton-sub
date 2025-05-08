@@ -1,3 +1,15 @@
+variable "TZ" {
+  type = string
+}
+
+variable "CORS_ORIGIN_PERMISSION" {
+  type = string
+}
+
+variable "EXAMPLE_QUEUE_URL" {
+  type = string
+}
+
 variable "region" {
   default = "us-east-1"
 }
