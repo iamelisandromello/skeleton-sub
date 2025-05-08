@@ -61,51 +61,29 @@ jobs:
           export AWS_REGION="${{ env.AWS_REGION }}"
           export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 
-          # Import S3 Bucket if exists
-          if aws s3api head-bucket --bucket meu-unico-bucket-s3 2>/dev/null; then
-            terraform import aws_s3_bucket.lambda_code_bucket meu-unico-bucket-s3 || echo "Bucket already managed"
-          else
-            echo "Bucket 'meu-unico-bucket-s3' not found."
-          fi
+          echo "Importando recursos existentes..."
 
-          # Import IAM Role if exists
-          if aws iam get-role --role-name "${{ env.PROJECT_NAME }}_execution_role" 2>/dev/null; then
-            terraform import aws_iam_role.lambda_execution_role ${{ env.PROJECT_NAME }}_execution_role || echo "Role already managed"
-          else
-            echo "IAM Role '${{ env.PROJECT_NAME }}_execution_role' not found."
-          fi
+          # Importações com verificação real de sucesso
+          aws s3api head-bucket --bucket meu-unico-bucket-s3 && \
+            terraform import aws_s3_bucket.lambda_code_bucket meu-unico-bucket-s3 || echo "Bucket não gerenciado"
 
-          # Import CloudWatch Log Group if exists
-          if aws logs describe-log-groups --log-group-name-prefix "/aws/lambda/${{ env.PROJECT_NAME }}" --region "$AWS_REGION" --query 'logGroups[0].logGroupName' --output text 2>/dev/null; then
-            terraform import aws_cloudwatch_log_group.lambda_log_group "/aws/lambda/${{ env.PROJECT_NAME }}" || echo "Log group already managed"
-          else
-            echo "CloudWatch Log Group '/aws/lambda/${{ env.PROJECT_NAME }}' not found."
-          fi
+          aws iam get-role --role-name "${{ env.PROJECT_NAME }}_execution_role" && \
+            terraform import aws_iam_role.lambda_execution_role ${{ env.PROJECT_NAME }}_execution_role || echo "Role não gerenciada"
 
-          # Import Lambda Function if exists
-          if aws lambda get-function --function-name ${{ env.PROJECT_NAME }} --region "$AWS_REGION" 2>/dev/null; then
-            terraform import aws_lambda_function.my_lambda_function ${{ env.PROJECT_NAME }} || echo "Lambda function already managed"
-          else
-            echo "Lambda function '${{ env.PROJECT_NAME }}' not found."
-          fi
+          aws logs describe-log-groups --log-group-name-prefix "/aws/lambda/${{ env.PROJECT_NAME }}" --region "$AWS_REGION" && \
+            terraform import aws_cloudwatch_log_group.lambda_log_group "/aws/lambda/${{ env.PROJECT_NAME }}" || echo "Log group não gerenciado"
 
-          # Import SQS Queue if exists
+          aws lambda get-function --function-name ${{ env.PROJECT_NAME }} --region "$AWS_REGION" && \
+            terraform import aws_lambda_function.my_lambda_function ${{ env.PROJECT_NAME }} || echo "Lambda não gerenciada"
+
           QUEUE_URL=$(aws sqs get-queue-url --queue-name "$QUEUE_NAME" --region "$AWS_REGION" --query 'QueueUrl' --output text 2>/dev/null)
-          if [ -n "$QUEUE_URL" ]; then
-            terraform import aws_sqs_queue.my_queue "$QUEUE_URL" || echo "Queue already managed"
-          else
-            echo "SQS Queue '$QUEUE_NAME' not found in region '$AWS_REGION'."
-          fi
+          [ -n "$QUEUE_URL" ] && \
+            terraform import aws_sqs_queue.my_queue "$QUEUE_URL" || echo "Fila não gerenciada"
 
-          # Import Lambda Permission if exists
           POLICY=$(aws lambda get-policy --function-name ${{ env.PROJECT_NAME }} --region "$AWS_REGION" --query 'Policy' --output text 2>/dev/null)
-          if echo "$POLICY" | grep -q "AllowExecutionFromSQS"; then
-            terraform import aws_lambda_permission.allow_sqs_invoke "${{ env.PROJECT_NAME }}/AllowExecutionFromSQS" || echo "Permission already managed"
-          else
-            echo "Lambda permission not found."
-          fi
+          echo "$POLICY" | grep -q "AllowExecutionFromSQS" && \
+            terraform import aws_lambda_permission.allow_sqs_invoke "${{ env.PROJECT_NAME }}/AllowExecutionFromSQS" || echo "Permissão não gerenciada"
 
-          # Import Event Source Mapping if exists
           MAPPING_UUID=$(aws lambda list-event-source-mappings \
             --function-name ${{ env.PROJECT_NAME }} \
             --event-source arn:aws:sqs:$AWS_REGION:$ACCOUNT_ID:$QUEUE_NAME \
@@ -113,20 +91,19 @@ jobs:
             --query 'EventSourceMappings[0].UUID' \
             --output text 2>/dev/null)
 
-          if [ "$MAPPING_UUID" != "None" ] && [ -n "$MAPPING_UUID" ]; then
-            terraform import aws_lambda_event_source_mapping.from_sqs "$MAPPING_UUID" || echo "Event Source Mapping already managed"
-          else
-            echo "Event Source Mapping not found."
-          fi
-        continue-on-error: true
+          [ "$MAPPING_UUID" != "None" ] && [ -n "$MAPPING_UUID" ] && \
+            terraform import aws_lambda_event_source_mapping.from_sqs "$MAPPING_UUID" || echo "Event Source Mapping não gerenciado"
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           TF_VAR_project_name: ${{ env.PROJECT_NAME }}
         working-directory: terraform
 
-      - name: Terraform Apply
-        run: terraform apply -auto-approve
+      - name: Terraform Validate and Apply
+        run: |
+          terraform validate
+          terraform plan -out=tfplan
+          terraform apply -auto-approve tfplan
         working-directory: terraform
         env:
           TF_VAR_project_name: ${{ env.PROJECT_NAME }}
