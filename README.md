@@ -40,7 +40,7 @@ Depois de criar algo incrível com o SkeletonPub, mostre seu trabalho na nossa s
 
 ## Introdução
 
-Este é um projeto TypeScript/Node.js que serve como base para desenvolvimento de aplicações. O projeto inclui configurações para testes, formatação de código e ambiente de desenvolvimento.
+Este é um projeto TypeScript/Node.js que serve como base para desenvolvimento de aplicações. O projeto inclui configurações para testes, formatação de código, processo de linting e ambiente de desenvolvimento.
 
 ## Requisitos
 
