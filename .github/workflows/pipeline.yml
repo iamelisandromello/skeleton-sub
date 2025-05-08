@@ -57,6 +57,8 @@ jobs:
 
       - name: Manage Existing AWS Resources
         run: |
+          set -e
+
           export QUEUE_NAME="${{ env.PROJECT_NAME }}-queue"
           export AWS_REGION="${{ env.AWS_REGION }}"
           export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
