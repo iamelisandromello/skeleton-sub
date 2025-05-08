@@ -75,8 +75,8 @@ jobs:
           fi
 
           # Importar permissão Lambda se existir
-          POLICY=$(aws lambda get-policy --function-name ${{ env.PROJECT_NAME }} --region "$AWS_REGION" --output text 2>/dev/null)
-          if echo "$POLICY" | grep -q "AllowExecutionFromSQS"; then
+          PERMISSION_EXISTS=$(aws lambda get-policy --function-name ${{ env.PROJECT_NAME }} --region "$AWS_REGION" --query 'Policy' --output text 2>/dev/null)
+          if [ -n "$PERMISSION_EXISTS" ]; then
             terraform import aws_lambda_permission.allow_sqs_invoke "${{ env.PROJECT_NAME }}/AllowExecutionFromSQS" || echo "Permission already managed"
           else
             echo "Lambda permission not found"
