@@ -70,33 +70,47 @@ jobs:
       # 10. Importa recursos se já existirem (não tenta recriar)
       - name: Import AWS resources if they exist
         run: |
+          set -euo pipefail
+
           QUEUE_NAME="skeleton-pub-queue"
           AWS_REGION="${{ env.AWS_REGION }}"
-          FUNCTION_NAME="skeleton-sub"
+          FUNCTION_NAME="${{ env.PROJECT_NAME }}"
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 
           echo "Account ID: $ACCOUNT_ID"
+          echo "Function Name: $FUNCTION_NAME"
+          echo "Queue Name: $QUEUE_NAME"
+          echo "Region: $AWS_REGION"
 
           cd terraform
 
           # Importa SQS se existir
-          QUEUE_URL=$(aws sqs get-queue-url --queue-name "$QUEUE_NAME" --region "$AWS_REGION" --query 'QueueUrl' --output text 2>/dev/null)
+          QUEUE_URL=$(aws sqs get-queue-url --queue-name "$QUEUE_NAME" --region "$AWS_REGION" --query 'QueueUrl' --output text 2>/dev/null || true)
           if [ -n "$QUEUE_URL" ]; then
-            terraform import aws_sqs_queue.skeleton_pub_queue "$QUEUE_URL"
+            echo "Importando fila SQS: $QUEUE_URL"
+            terraform import aws_sqs_queue.skeleton_pub_queue "$QUEUE_URL" || true
+          else
+            echo "Fila SQS não encontrada: $QUEUE_NAME"
           fi
 
           # Importa permissão da Lambda
+          echo "Importando permissão Lambda (se existir)..."
           terraform import aws_lambda_permission.allow_sqs_invoke "${FUNCTION_NAME}/AllowExecutionFromSQS" || true
 
           # Importa Event Source Mapping
+          echo "Verificando Event Source Mapping..."
           MAPPING_UUID=$(aws lambda list-event-source-mappings \
             --function-name "$FUNCTION_NAME" \
             --event-source "arn:aws:sqs:$AWS_REGION:$ACCOUNT_ID:$QUEUE_NAME" \
             --region "$AWS_REGION" \
             --query 'EventSourceMappings[0].UUID' \
-            --output text 2>/dev/null)
+            --output text 2>/dev/null || true)
+
           if [ "$MAPPING_UUID" != "None" ] && [ -n "$MAPPING_UUID" ]; then
-            terraform import aws_lambda_event_source_mapping.from_sqs "$MAPPING_UUID"
+            echo "Importando Event Source Mapping: $MAPPING_UUID"
+            terraform import aws_lambda_event_source_mapping.from_sqs "$MAPPING_UUID" || true
+          else
+            echo "Nenhum Event Source Mapping encontrado."
           fi
 
           # Importa bucket S3, IAM Role, LogGroup, Lambda
