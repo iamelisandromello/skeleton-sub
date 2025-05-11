@@ -1,20 +1,27 @@
+# ====================
+# ✅ Provider AWS
+# ====================
 provider "aws" {
-  region = var.aws_region
+  region = var.region
 }
 
-# S3 bucket para código da Lambda
+# ================================
+# 📦 S3 bucket para código da Lambda
+# ================================
 resource "aws_s3_bucket" "lambda_code_bucket" {
-  bucket = "meu-unico-bucket-s3"
+  bucket        = local.bucket_name
   force_destroy = true
 }
 
-# Função Lambda
+# ====================
+# 🧠 Função Lambda
+# ====================
 resource "aws_lambda_function" "my_lambda_function" {
-  function_name = var.project_name
+  function_name = local.lambda_name
   s3_bucket     = aws_s3_bucket.lambda_code_bucket.id
-  s3_key        = "${var.project_name}.zip"
-  handler       = "index.handler"
-  runtime       = "nodejs20.x"
+  s3_key        = local.lambda_zip_key
+  handler       = local.lambda_handler
+  runtime       = local.lambda_runtime
   role          = aws_iam_role.lambda_execution_role.arn
   timeout       = 30
 
@@ -23,20 +30,26 @@ resource "aws_lambda_function" "my_lambda_function" {
   }
 }
 
-# Grupo de logs do CloudWatch
+# ================================
+# 📂 Grupo de logs do CloudWatch
+# ================================
 resource "aws_cloudwatch_log_group" "lambda_log_group" {
-  name              = "/aws/lambda/${aws_lambda_function.my_lambda_function.function_name}"
+  name              = local.lambda_log_group
   retention_in_days = 14
 }
 
-# Fila SQS
+# ====================
+# 📩 Fila SQS
+# ====================
 resource "aws_sqs_queue" "skeleton_pub_queue" {
-  name = "${var.project_name}-queue"
+  name = local.queue_name
 }
 
-# Role de execução da Lambda
+# ================================
+# 🔐 Role de execução da Lambda
+# ================================
 resource "aws_iam_role" "lambda_execution_role" {
-  name = "${var.project_name}_execution_role"
+  name = local.role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -50,9 +63,11 @@ resource "aws_iam_role" "lambda_execution_role" {
   })
 }
 
-# Permissões básicas + acesso à SQS
+# ========================================================
+# 🔓 Permissões básicas para CloudWatch + acesso à SQS
+# ========================================================
 resource "aws_iam_role_policy" "allow_lambda_logging_and_sqs" {
-  name = "lambda-logging-and-sqs"
+  name = local.policy_name
   role = aws_iam_role.lambda_execution_role.id
 
   policy = jsonencode({
@@ -80,16 +95,26 @@ resource "aws_iam_role_policy" "allow_lambda_logging_and_sqs" {
   })
 }
 
-# Permissão para SQS invocar a Lambda
+# ==================================================
+# 📛 Permissão para SQS invocar a função Lambda
+# ==================================================
 resource "aws_lambda_permission" "allow_sqs_invoke" {
   statement_id  = "AllowExecutionFromSQS"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.my_lambda_function.function_name
   principal     = "sqs.amazonaws.com"
   source_arn    = aws_sqs_queue.skeleton_pub_queue.arn
+
+  # 🔒 Evita race condition entre criação da fila e lambda
+  depends_on = [
+    aws_lambda_function.my_lambda_function,
+    aws_sqs_queue.skeleton_pub_queue
+  ]
 }
 
-# Mapeamento entre a SQS e a Lambda
+# ============================================================
+# 🔁 Mapeamento de eventos: conecta a fila SQS à função Lambda
+# ============================================================
 resource "aws_lambda_event_source_mapping" "from_sqs" {
   event_source_arn = aws_sqs_queue.skeleton_pub_queue.arn
   function_name    = aws_lambda_function.my_lambda_function.arn
