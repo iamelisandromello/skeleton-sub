@@ -6,11 +6,10 @@ provider "aws" {
 }
 
 # ================================
-# 📦 S3 bucket para código da Lambda
+# 📦 Bucket S3 (referência existente)
 # ================================
-resource "aws_s3_bucket" "lambda_code_bucket" {
-  bucket        = local.bucket_name
-  force_destroy = true
+data "aws_s3_bucket" "lambda_code_bucket" {
+  bucket = local.bucket_name
 }
 
 # ====================
@@ -18,7 +17,7 @@ resource "aws_s3_bucket" "lambda_code_bucket" {
 # ====================
 resource "aws_lambda_function" "my_lambda_function" {
   function_name = local.lambda_name
-  s3_bucket     = aws_s3_bucket.lambda_code_bucket.id
+  s3_bucket     = data.aws_s3_bucket.lambda_code_bucket.bucket
   s3_key        = local.lambda_zip_key
   handler       = local.lambda_handler
   runtime       = local.lambda_runtime
