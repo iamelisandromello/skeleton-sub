@@ -1,15 +1,3 @@
-# =================================
-# Variáveis de ambiente do Projeto
-# =================================
-
-variable "CORS_ORIGIN_PERMISSION" {
-  type = string
-}
-
-variable "MESSAGE_TYPE_QUEUE" {
-  type = string
-}
-
 # ================================
 # Variáveis de ambiente da GitHub
 # ================================
