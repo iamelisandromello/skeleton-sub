@@ -2,19 +2,6 @@ provider "aws" {
   region = var.aws_region
 }
 
-variable "project_name" {
-  type = string
-}
-
-variable "aws_region" {
-  type    = string
-  default = "us-east-1"
-}
-
-variable "lambda_env_vars" {
-  type = map(string)
-}
-
 # S3 bucket para código da Lambda
 resource "aws_s3_bucket" "lambda_code_bucket" {
   bucket = "meu-unico-bucket-s3"
