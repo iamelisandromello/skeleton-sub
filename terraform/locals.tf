@@ -4,7 +4,7 @@ locals {
   queue_name        = "${local.project_name}-queue"
   role_name         = "${local.project_name}-execution-role"
   policy_name       = "${local.project_name}-lambda-policy"
-  bucket_name       = "${local.project_name}-lambda-bucket"
+  bucket_name       = "meu-unico-bucket-s3"
   lambda_zip_key    = "${local.project_name}.zip"
   lambda_handler    = "index.handler"
   lambda_runtime    = "nodejs20.x"
