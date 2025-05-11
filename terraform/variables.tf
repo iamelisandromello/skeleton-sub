@@ -2,23 +2,11 @@
 # Variáveis de ambiente do Projeto
 # =================================
 
-variable "TZ" {
-  type = string
-}
-
 variable "CORS_ORIGIN_PERMISSION" {
   type = string
 }
 
-variable "EXAMPLE_QUEUE_URL" {
-  type = string
-}
-
 variable "MESSAGE_TYPE_QUEUE" {
-  type = string
-}
-
-variable "MOCK_ACCESS_TOKEN" {
   type = string
 }
 
