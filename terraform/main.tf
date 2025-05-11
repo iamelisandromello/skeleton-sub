@@ -41,7 +41,7 @@ resource "aws_cloudwatch_log_group" "lambda_log_group" {
 # ====================
 # 📩 Fila SQS
 # ====================
-resource "aws_sqs_queue" "skeleton_pub_queue" {
+resource "aws_sqs_queue" "pub_queue" {
   name = local.queue_name
 }
 
@@ -89,7 +89,7 @@ resource "aws_iam_role_policy" "allow_lambda_logging_and_sqs" {
           "sqs:DeleteMessage",
           "sqs:GetQueueAttributes"
         ],
-        Resource = aws_sqs_queue.skeleton_pub_queue.arn
+        Resource = aws_sqs_queue.pub_queue.arn
       }
     ]
   })
@@ -103,12 +103,12 @@ resource "aws_lambda_permission" "allow_sqs_invoke" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.my_lambda_function.function_name
   principal     = "sqs.amazonaws.com"
-  source_arn    = aws_sqs_queue.skeleton_pub_queue.arn
+  source_arn    = aws_sqs_queue.pub_queue.arn
 
   # 🔒 Evita race condition entre criação da fila e lambda
   depends_on = [
     aws_lambda_function.my_lambda_function,
-    aws_sqs_queue.skeleton_pub_queue
+    aws_sqs_queue.pub_queue
   ]
 }
 
@@ -116,8 +116,9 @@ resource "aws_lambda_permission" "allow_sqs_invoke" {
 # 🔁 Mapeamento de eventos: conecta a fila SQS à função Lambda
 # ============================================================
 resource "aws_lambda_event_source_mapping" "from_sqs" {
-  event_source_arn = aws_sqs_queue.skeleton_pub_queue.arn
+  event_source_arn = aws_sqs_queue.pub_queue.arn
   function_name    = aws_lambda_function.my_lambda_function.arn
   batch_size       = 5
   enabled          = true
 }
+
