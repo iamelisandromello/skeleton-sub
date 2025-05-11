@@ -53,7 +53,7 @@ resource "aws_cloudwatch_log_group" "lambda_log_group" {
   retention_in_days = 14
 }
 
-# Função Lambda que será atualizada com código zipado do S3
+# Função Lambda que deverá ser atualizada em caso de existência, nunca criar uma duplicata.
 resource "aws_lambda_function" "my_lambda_function" {
   function_name = var.project_name
   role          = aws_iam_role.lambda_execution_role.arn
