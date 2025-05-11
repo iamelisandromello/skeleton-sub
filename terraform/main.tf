@@ -120,3 +120,4 @@ resource "aws_lambda_event_source_mapping" "from_sqs" {
   function_name    = aws_lambda_function.my_lambda_function.arn
   batch_size       = 5
   enabled          = true
+}
