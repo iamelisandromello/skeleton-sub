@@ -8,8 +8,7 @@ resource "aws_s3_bucket" "lambda_code_bucket" {
   bucket = "meu-unico-bucket-s3"
 }
 
-# IAM Role para a execução das funções Lambda.
-# Sem instrução de criação, deve ser importada caso exista, conforme regras de negócio.
+# IAM Role para a execução da função Lambda — assume role com permissão apenas para lambda.amazonaws.com
 resource "aws_iam_role" "lambda_execution_role" {
   name = "${var.project_name}_execution_role"
 
@@ -17,16 +16,30 @@ resource "aws_iam_role" "lambda_execution_role" {
     Version = "2012-10-17",
     Statement = [
       {
-        Action = "sts:AssumeRole",
         Effect = "Allow",
         Principal = {
-          Service: "lambda.amazonaws.com"
-        }
-      },
+          Service = "lambda.amazonaws.com"
+        },
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+# Inline policy para a Lambda poder escrever logs no CloudWatch
+resource "aws_iam_role_policy" "lambda_logging_policy" {
+  name = "${var.project_name}_logging_policy"
+  role = aws_iam_role.lambda_execution_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
       {
         Effect = "Allow",
         Action = [
-          "logs:*"
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
         ],
         Resource = "arn:aws:logs:${var.region}:*:log-group:/aws/lambda/${var.project_name}:*"
       }
@@ -34,7 +47,13 @@ resource "aws_iam_role" "lambda_execution_role" {
   })
 }
 
-# Função Lambda que deverá ser atualizada em caso de existência, nunca criar uma duplicata.
+# CloudWatch Log Group para a função Lambda
+resource "aws_cloudwatch_log_group" "lambda_log_group" {
+  name              = "/aws/lambda/${var.project_name}"
+  retention_in_days = 14
+}
+
+# Função Lambda que será atualizada com código zipado do S3
 resource "aws_lambda_function" "my_lambda_function" {
   function_name = var.project_name
   role          = aws_iam_role.lambda_execution_role.arn
@@ -47,11 +66,6 @@ resource "aws_lambda_function" "my_lambda_function" {
   environment {
     variables = var.lambda_env_vars
   }
-}
 
-# CloudWatch Log Group para a função Lambda com instrução de importação se já existir.
-# Conformidade com as regras de negócio para reutilização de recursos.
-resource "aws_cloudwatch_log_group" "lambda_log_group" {
-  name              = "/aws/lambda/${var.project_name}"
-  retention_in_days = 14
+  depends_on = [aws_iam_role_policy.lambda_logging_policy]
 }
