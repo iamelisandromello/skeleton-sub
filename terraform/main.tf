@@ -69,3 +69,26 @@ resource "aws_lambda_function" "my_lambda_function" {
 
   depends_on = [aws_iam_role_policy.lambda_logging_policy]
 }
+
+# Recursos para QUEUES SQS
+# Declaração da fila SQS (deve ser importada se já existir)
+resource "aws_sqs_queue" "skeleton_pub_queue" {
+  name = "${var.project_name}-queue"
+}
+
+# Permissão para que a SQS invoque a Lambda
+resource "aws_lambda_permission" "allow_sqs_invoke" {
+  statement_id  = "AllowExecutionFromSQS"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.my_lambda_function.function_name
+  principal     = "sqs.amazonaws.com"
+  source_arn    = aws_sqs_queue.skeleton_pub_queue.arn
+}
+
+# Mapeamento da SQS como evento da Lambda
+resource "aws_lambda_event_source_mapping" "from_sqs" {
+  event_source_arn = aws_sqs_queue.skeleton_pub_queue.arn
+  function_name    = aws_lambda_function.my_lambda_function.arn
+  batch_size       = 10
+  enabled          = true
+}
