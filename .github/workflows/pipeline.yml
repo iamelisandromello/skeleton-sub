@@ -53,12 +53,7 @@ jobs:
 
       - name: Create environment JSON file for Terraform
         run: |
-          cat <<EOF > terraform/lambda-env-vars.auto.tfvars.json
-          {
-            "lambda_env_vars": ${{ secrets.LAMBDA_ENV_VARS_JSON }},
-            "CORS_ORIGIN_PERMISSION": "${{ secrets.CORS_ORIGIN_PERMISSION }}"
-          }
-          EOF
+          printf '{"lambda_env_vars": %s}\n' '${{ secrets.LAMBDA_ENV_VARS_JSON }}' > terraform/lambda-env-vars.auto.tfvars.json
 
       - name: Import existing AWS resources
         run: |
