@@ -13,6 +13,10 @@ env:
   AWS_REGION: us-east-1
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  PROJECT_NAME: my-lambda
+  ENVIRONMENT: staging
+  S3_BUCKET_NAME: my-shared-lambdas-bucket
+  TERRAFORM_PATH: ./terraform
 
 jobs:
   deploy:
@@ -27,7 +31,7 @@ jobs:
 
       # -------------------------------
       # ⚙️ SETUP NODE & VARS
-      # -------------------------------
+      # -------------------------------        
       - name: Setup Node.js and Env Vars
         uses: BreathingCode/terraform-pipeline-template/.github/actions/setup-node@main
         with:
@@ -35,12 +39,15 @@ jobs:
 
       # -------------------------------
       # 🔧 BUILD & PACKAGE LAMBDA
-      # -------------------------------
+      # -------------------------------          
       - name: Install & Build
         uses: BreathingCode/terraform-pipeline-template/.github/actions/build-package@main
         with:
           project_name: ${{ env.PROJECT_NAME }}
-        
+
+      # -------------------------------
+      # 🔄 UPLOAD LAMBDA TO S3
+      # -------------------------------        
       - name: Upload Lambda to S3
         uses: BreathingCode/terraform-pipeline-template/.github/actions/upload-to-s3@main
         with:
@@ -51,7 +58,7 @@ jobs:
 
       # -------------------------------
       # ⚙️ TERRAFORM SETUP & TFVARS
-      # -------------------------------
+      # -------------------------------          
       - name: Setup Terraform
         uses: BreathingCode/terraform-pipeline-template/.github/actions/setup-terraform@main
         with:
@@ -62,6 +69,9 @@ jobs:
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
+      # -------------------------------
+      # 🔄 GENERATE TVARS
+      # -------------------------------          
       - name: Generate tfvars
         uses: BreathingCode/terraform-pipeline-template/.github/actions/generate-tfvars@main
         with:
@@ -73,10 +83,11 @@ jobs:
           aws_region: ${{ env.AWS_REGION }}
           project_name: ${{ env.PROJECT_NAME }}
           environment: ${{ env.ENVIRONMENT }}
+          terraform_path: ${{ env.TERRAFORM_PATH }}
 
       # -------------------------------
       # 🔄 IMPORT & APPLY TERRAFORM
-      # -------------------------------
+      # -------------------------------    
       - name: Importar recursos existentes
         uses: BreathingCode/terraform-pipeline-template/.github/actions/import-resources@main
         with:
@@ -85,9 +96,12 @@ jobs:
           aws_region: ${{ env.AWS_REGION }}
           project_name: ${{ env.PROJECT_NAME }}
           environment: ${{ env.ENVIRONMENT }}
+          terraform_path: ${{ env.TERRAFORM_PATH }}
 
       - name: Validar Terraform
         uses: BreathingCode/terraform-pipeline-template/.github/actions/validate-terraform@main
+        with:
+          terraform_path: ${{ env.TERRAFORM_PATH }}
 
       - name: Terraform Plan and Apply
         uses: BreathingCode/terraform-pipeline-template/.github/actions/plan-apply-terraform@main
