@@ -141,32 +141,6 @@ Executa o `terraform plan` e `terraform apply` com variáveis específicas para 
 
 ---
 
-## 🛠️ Organização Sugerida
-
-```bash
-.github/
-└── actions/
-├── build-package/
-│ └── action.yml
-├── setup-node/
-│ └── action.yml
-├── upload-to-s3/
-│ └── action.yml
-├── setup-terraform/
-│ └── action.yml
-├── generate-tfvars/
-│ └── action.yml
-├── import-resources/
-│ └── action.yml
-├── validate-terraform/
-│ └── action.yml
-├── plan-apply-terraform/
-│ └── action.yml
-└── README.md
-```
-
----
-
 ## ✅ Boas Práticas
 
 - Ações compostas favorecem reuso e clareza.
