@@ -22,35 +22,12 @@ Empacota uma função Lambda em Node.js:
 ### 2. [`setup-node`](./setup-node)
 Configura o ambiente Node.js (via `actions/setup-node`) com cache automático.
 
-<<<<<<< Updated upstream:.github/actions/readme.md
-**Inputs:**
-- `NODE_VERSION` – Versão do Node.js (ex: `18.x`) ✅ **obrigatório**
-=======
-```
+```bash
 .
 ├── .github
     ├── readme.md
-    ├── workflows/
-    │  └─pipeline.yml
-    └── actions/
-       ├── setup-node
-       │   └── action.yml
-       ├── build-package
-       │   └── action.yml
-       ├── upload-to-s3
-       │   └── action.yml
-       ├── setup-terraform
-       │   └── action.yml
-       ├── generate-tfvars
-       │   └── action.yml
-       ├── import-resources
-       │   ├── scripts/
-       │   │  └── import.sh
-       │   └── action.yml
-       ├── validate-terraform
-       │   └── action.yml
-       └── plan-apply-terraform
-           └─ action.yml
+    └── workflows/
+       └─pipeline.yml
 ├── terraform/
     ├── main.tf
     ├── variables.tf
@@ -83,7 +60,6 @@ Configura o ambiente Node.js (via `actions/setup-node`) com cache automático.
       └── app.ts
         └── handler
 ```
->>>>>>> Stashed changes:.github/readme.md
 
 ---
 
@@ -167,6 +143,7 @@ Executa o `terraform plan` e `terraform apply` com variáveis específicas para 
 
 ## 🛠️ Organização Sugerida
 
+```bash
 .github/
 └── actions/
 ├── build-package/
@@ -186,7 +163,7 @@ Executa o `terraform plan` e `terraform apply` com variáveis específicas para 
 ├── plan-apply-terraform/
 │ └── action.yml
 └── README.md
-
+```
 
 ---
 
