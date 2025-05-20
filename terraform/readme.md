@@ -107,3 +107,5 @@ global_env_vars  = { STAGE = "dev" }
 - modules/lambda
 
 - modules/sqs
+
+## 📚 Terraform do Consumidor
