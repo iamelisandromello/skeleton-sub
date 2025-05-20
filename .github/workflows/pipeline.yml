@@ -75,15 +75,14 @@ jobs:
       - name: Generate tfvars
         uses: iamelisandromello/terraform-pipeline-template/generate-tfvars@main
         with:
-          environments: ${{ secrets.ENVIRONMENTS }}
-          global_env_vars_json: ${{ secrets.GLOBAL_ENV_VARS_JSON }}
+          ENVIRONMENTS: ${{ secrets.ENVIRONMENTS }}
+          GLOBAL_ENV_VARS_JSON: ${{ secrets.GLOBAL_ENV_VARS_JSON }}
           s3_bucket_name: ${{ env.S3_BUCKET_NAME }}
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws_region: ${{ env.AWS_REGION }}
-          project_name: ${{ env.PROJECT_NAME }}
-          environment: ${{ env.ENVIRONMENT }}
-          terraform_path: ${{ env.TERRAFORM_PATH }}
+          AWS_REGION: ${{ env.AWS_REGION }}
+          PROJECT_NAME: ${{ env.PROJECT_NAME }}
+          ENVIRONMENT: ${{ env.ENVIRONMENT }}
 
       # -------------------------------
       # 🔄 IMPORT & APPLY TERRAFORM
@@ -111,3 +110,7 @@ jobs:
           ENVIRONMENT: ${{ env.ENVIRONMENT }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          GLOBAL_ENV_VARS_JSON: ${{ secrets.GLOBAL_ENV_VARS_JSON }}
+          ENVIRONMENTS_JSON: ${{ secrets.ENVIRONMENTS }}
+          terraform_path: ${{ env.TERRAFORM_PATH }}
+
