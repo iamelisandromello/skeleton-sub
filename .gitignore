@@ -6,3 +6,8 @@ coverage
 yarn.lock
 .vscode/launch.json
 **/*.DS_Store
+*.zip
+lambda-package/
+.terraform/
+terraform.tfstate*
+
