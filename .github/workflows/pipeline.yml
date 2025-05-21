@@ -16,7 +16,7 @@ env:
   PROJECT_NAME: my-lambda
   ENVIRONMENT: staging
   S3_BUCKET_NAME: my-shared-lambdas-bucket
-  TERRAFORM_PATH: ./terraform
+  TERRAFORM_PATH: terraform
 
 jobs:
   deploy:
@@ -113,4 +113,3 @@ jobs:
           GLOBAL_ENV_VARS_JSON: ${{ secrets.GLOBAL_ENV_VARS_JSON }}
           ENVIRONMENTS_JSON: ${{ secrets.ENVIRONMENTS }}
           terraform_path: ${{ env.TERRAFORM_PATH }}
-
