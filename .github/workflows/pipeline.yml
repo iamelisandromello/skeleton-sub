@@ -33,7 +33,7 @@ jobs:
       - name: Validate input path
         shell: bash
         run: |
-          test -d "${{ inputs.source_path }}" || (echo "::error::Source path '${{ inputs.source_path }}' does not exist" && exit 1)
+          test -d "${{ inputs.TERRAFORM_PATH }}" || (echo "::error::Source path '${{ inputs.TERRAFORM_PATH }}' does not exist" && exit 1)
 
       # -------------------------------
       # ⚙️ SETUP NODE & VARS
