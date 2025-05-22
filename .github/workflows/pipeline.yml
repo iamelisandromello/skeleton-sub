@@ -29,12 +29,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # ✅ Valida se o diretório fonte existe
-      - name: Validate input path
-        shell: bash
-        run: |
-          test -d "${{ inputs.TERRAFORM_PATH }}" || (echo "::error::Source path '${{ inputs.TERRAFORM_PATH }}' does not exist" && exit 1)
-
       # -------------------------------
       # ⚙️ SETUP NODE & VARS
       # -------------------------------        
