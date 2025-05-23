@@ -28,9 +28,9 @@ variable "environment" {
   }
 }
   
-# =========================
+# ================================
 # Variáveis de ambiente da Lambda
-# =========================
+# ================================
 
 variable "global_env_vars" {
   description = "Mapa de ambientes com suas respectivas variáveis de ambiente para a Lambda"

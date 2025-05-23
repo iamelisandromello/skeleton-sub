@@ -92,11 +92,8 @@ jobs:
           echo "📄 Conteúdo de terraform.tfvars:"
           cat terraform/terraform.auto.tfvars.json || echo "❌ Arquivo terraform.auto.tfvars.json não encontrado"
 
-          echo "📄 Conteúdo de arquivos terraform.auto.tfvars.json (se houver):"
-          ls terraform/*.auto.tfvars.json 2>/dev/null && cat terraform/*.auto.tfvars.json || echo "❌ Nenhum terraform.auto.tfvars.json encontrado"
-    
-  # -------------------------------
-      # 🔄 IMPORT & APPLY TERRAFORM
+      # -------------------------------
+      # 🔄 IMPORT, VALIDATE & APPLY TERRAFORM
       # -------------------------------    
       - name: Importar recursos existentes
         uses: iamelisandromello/terraform-pipeline-template/import-resources@main
