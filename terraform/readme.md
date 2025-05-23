@@ -42,8 +42,6 @@ terraform/
         ├── variables.tf
         └── outputs.tf
 ```
-
-
 ---
 
 ## 🛠️ Como Usar
@@ -109,3 +107,4 @@ global_env_vars  = { STAGE = "dev" }
 - modules/sqs
 
 ## 📚 Terraform do Consumidor
+- Arquivos Terraform para provisionamento autonomo de recursos na AWS
